@@ -11,7 +11,7 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "Missing GEMINI_API_KEY on server" });
+      return res.status(500).json({ error: "The server is out of tokens. Please try again later." });
     }
 
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
@@ -19,24 +19,31 @@ export default async function handler(req, res) {
     const model = genAI.getGenerativeModel({ model: "models/gemini-2.5-flash" });
 
     const prompt = buildPrompt(tool, input);
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
 
-    return res.status(200).json({ text });
+    try {
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      return res.status(200).json({ text });
+    } catch (apiError) {
+      if (apiError.message.includes("quota exceeded")) {
+        return res.status(500).json({ error: "The server is out of tokens. Please try again later." });
+      }
+      throw apiError;
+    }
   } catch (err) {
-  console.error("API ERROR:", err);
+    console.error("API ERROR:", err);
 
-  return res.status(500).json({
-    error: err.message,
-    stack: err.stack
-  });
-}
+    return res.status(500).json({
+      error: err.message,
+      stack: err.stack
+    });
+  }
 }
 
 function buildPrompt(tool, input) {
   const base =
-    `You are a senior Product Manager assistant. ` +
-    `Always output clearly structured sections with bullets. ` +
+    `You are a senior product manager helping analyze product problems and propose structured solutions. ` +
+    `Always respond with clearly structured sections, concise bullet points, and practical product thinking. ` +
     `Include: Assumptions, Risks, Success Metrics, Next Steps.\n\n`;
 
   switch (tool) {
