@@ -24,9 +24,13 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ text });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Server error" });
-  }
+  console.error("API ERROR:", err);
+
+  return res.status(500).json({
+    error: err.message,
+    stack: err.stack
+  });
+}
 }
 
 function buildPrompt(tool, input) {
