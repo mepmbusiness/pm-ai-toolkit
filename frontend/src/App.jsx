@@ -12,6 +12,33 @@ export default function App() {
   const [tool, setTool] = useState("prd");
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ tool, input }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setOutput(data.text);
+    } catch (error) {
+      console.error("Failed to generate output:", error);
+      setOutput(`An error occurred: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{ padding: "40px", fontFamily: "Arial" }}>
@@ -49,20 +76,22 @@ export default function App() {
       <br />
 
       <button
+        onClick={handleGenerate}
+        disabled={loading}
         style={{
           padding: "12px 20px",
-          background: "black",
+          background: loading ? "#555" : "black",
           color: "white",
           border: "none",
-          cursor: "pointer",
+          cursor: loading ? "not-allowed" : "pointer",
         }}
       >
-        Generate
+        {loading ? "Generating..." : "Generate"}
       </button>
 
       <h2 style={{ marginTop: "40px" }}>Output</h2>
 
-      <pre style={{ background: "#f4f4f4", padding: "20px" }}>{output}</pre>
+      <pre style={{ background: "#f4f4f4", padding: "20px", whiteSpace: "pre-wrap" }}>{output}</pre>
     </div>
   );
 }
